@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AR 双手手势 — A 侧调试</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0d0d0f; overflow: hidden; font-family: system-ui, sans-serif; }
+  #stage { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  #panel {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    background: rgba(0,0,0,.55); padding: 10px 16px; border-radius: 12px;
+    color: #eee; z-index: 10; backdrop-filter: blur(6px);
+    transition: opacity .4s;
+  }
+  #panel button {
+    background: #2b2b33; color: #eee; border: 1px solid #444;
+    padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 14px;
+  }
+  #panel button:hover { background: #3a3a44; }
+  #panel label { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  #hint {
+    position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+    color: #ffe; background: rgba(0,0,0,.6); padding: 6px 14px; border-radius: 8px;
+    z-index: 10; display: none; font-size: 14px;
+  }
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+<div id="hint"></div>
+<div id="panel">
+  <button id="btnCamera">启动摄像头</button>
+  <button id="btnDemo">演示模式</button>
+  <button id="btnReset">重置</button>
+  <label>跟手平滑度 <input id="smooth" type="range" min="0" max="100" value="60" /></label>
+</div>
+
+<script type="module">
+  import { AR, LM } from "./src/tracking.js";
+
+  const canvas = document.getElementById("stage");
+  const hint = document.getElementById("hint");
+  const ctx = canvas.getContext("2d");
+
+  // —— 控制按钮 ——
+  document.getElementById("btnCamera").onclick = () => AR.startCamera();
+  document.getElementById("btnDemo").onclick = () => AR.startDemo();
+  document.getElementById("btnReset").onclick = () => AR.reset();
+  document.getElementById("smooth").oninput = (e) => AR.setSmooth(e.target.value / 100);
+
+  // —— 事件 ——
+  AR.on("status", ({ text }) => showHint(text, 4000));
+  AR.on("error", ({ code, message }) => showHint("⚠ " + message, 6000));
+  AR.on("handCount", ({ count }) => {
+    if (count === 1) showHint("只识别到一只手", 2000);
+    else if (count === 2) hideHint();
+  });
+  AR.on("stateChange", ({ state }) => {
+    document.getElementById("panel").style.opacity =
+      (state === "camera" || state === "demo") ? "0.35" : "1";
+  });
+
+  // —— 调试渲染：证明 A 侧管线输出正常 ——
+  const FINGERS = [[0,1,2,3,4],[0,5,6,7,8],[5,9,13,17],[9,10,11,12],[13,14,15,16],[17,18,19,20]];
+  AR.setFrameCallback((f) => {
+    ctx.clearRect(0, 0, f.w, f.h);
+    if (f.video) ctx.drawImage(f.video, 0, 0, f.w, f.h);
+    else { ctx.fillStyle = "#0d0d0f"; ctx.fillRect(0, 0, f.w, f.h); }
+    if (f.mask) { ctx.save(); ctx.globalAlpha = 0.3; ctx.drawImage(f.mask, 0, 0, f.w, f.h); ctx.restore(); }
+    drawHand(f.hands.left, "#4af", f);
+    drawHand(f.hands.right, "#fa4", f);
+  });
+
+  function drawHand(hand, color, f) {
+    if (!hand) return;
+    const pts = hand.pts;
+    ctx.strokeStyle = color; ctx.lineWidth = 2;
+    for (const line of FINGERS) {
+      ctx.beginPath();
+      line.forEach((idx, i) => {
+        const p = pts[idx];
+        if (i === 0) ctx.moveTo(p.x * f.w, p.y * f.h); else ctx.lineTo(p.x * f.w, p.y * f.h);
+      });
+      ctx.stroke();
+    }
+    [LM.THUMB_TIP, LM.INDEX_TIP, LM.MIDDLE_TIP, LM.PINKY_TIP].forEach(idx => {
+      const p = pts[idx];
+      ctx.beginPath(); ctx.arc(p.x * f.w, p.y * f.h, 5, 0, Math.PI * 2);
+      ctx.fillStyle = color; ctx.fill();
+    });
+  }
+
+  let hintTimer = 0;
+  function showHint(text, ms = 2500) {
+    hint.textContent = text; hint.style.display = "block";
+    clearTimeout(hintTimer);
+    if (ms > 0) hintTimer = setTimeout(hideHint, ms);
+  }
+  function hideHint() { hint.style.display = "none"; }
+
+  // —— 初始化 ——
+  AR.init({ canvas });
+</script>
+</body>
+</html>

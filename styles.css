@@ -1,0 +1,214 @@
+/* ============================================================
+   B1 — 全屏 / 深色 / 中文 UI 骨架
+   ============================================================ */
+
+:root {
+  --bg: #0b0d12;
+  --panel: rgba(255, 255, 255, 0.04);
+  --panel-border: rgba(255, 255, 255, 0.08);
+  --text: #e8eaf0;
+  --text-muted: #8a90a0;
+  --accent: #6ee7ff;
+
+  --state-idle:    #8a90a0;
+  --state-loading: #f6c85f;
+  --state-camera:  #4ade80;
+  --state-demo:    #6ee7ff;
+  --state-error:   #f87171;
+
+  /* 三块滤镜的品牌色（与 QUADS 红/蓝/绿对应） */
+  --filter-red:   #ff5d5d;
+  --filter-blue:  #5d8bff;
+  --filter-green: #5dff9a;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 全屏底层画布 */
+#stage {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: radial-gradient(circle at 50% 40%, #12151d 0%, var(--bg) 70%);
+}
+
+/* UI 覆盖层：默认穿透，子元素按需开启交互 */
+.ui {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px 24px;
+}
+
+/* ---- 顶部 ---- */
+.ui-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ui-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.ui-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--text-muted);
+  pointer-events: auto;
+}
+
+.state-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--state-idle);
+  box-shadow: 0 0 6px currentColor;
+}
+
+.state-dot[data-state="idle"]    { background: var(--state-idle);    color: var(--state-idle); }
+.state-dot[data-state="loading"] { background: var(--state-loading); color: var(--state-loading); }
+.state-dot[data-state="camera"]  { background: var(--state-camera);  color: var(--state-camera); }
+.state-dot[data-state="demo"]    { background: var(--state-demo);    color: var(--state-demo); }
+.state-dot[data-state="error"]   { background: var(--state-error);   color: var(--state-error); }
+
+/* ---- 提示条 ---- */
+.ui-notice {
+  position: absolute;
+  top: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 80vw;
+  padding: 10px 16px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--text);
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.ui-notice.is-error {
+  border-color: rgba(248, 113, 113, 0.4);
+  color: #fca5a5;
+}
+
+/* ---- 单手提示 ---- */
+.ui-hand-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 12px 20px;
+  background: rgba(246, 200, 95, 0.12);
+  border: 1px solid rgba(246, 200, 95, 0.35);
+  border-radius: 12px;
+  font-size: 15px;
+  color: #f6c85f;
+  pointer-events: none;
+}
+
+/* ---- 底部控制栏 ---- */
+.ui-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.ui-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.btn {
+  padding: 10px 18px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+.btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.btn:active { transform: translateY(1px); }
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn-primary {
+  background: rgba(110, 231, 255, 0.12);
+  border-color: rgba(110, 231, 255, 0.35);
+  color: var(--accent);
+}
+.btn-primary:hover {
+  background: rgba(110, 231, 255, 0.2);
+  border-color: rgba(110, 231, 255, 0.5);
+}
+
+/* ---- 平滑度滑块 ---- */
+.ui-smooth {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 360px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.ui-smooth label { white-space: nowrap; }
+.ui-smooth input[type="range"] {
+  flex: 1;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* ---- 弱化 UI：idle / error 状态下降低控制栏存在感 ---- */
+.ui[data-state="idle"] .ui-bottom,
+.ui[data-state="error"] .ui-bottom {
+  opacity: 0.55;
+  transition: opacity 0.3s ease;
+}
+.ui[data-state="camera"] .ui-bottom,
+.ui[data-state="demo"] .ui-bottom {
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+/* 窄屏适配 */
+@media (max-width: 640px) {
+  .ui { padding: 14px 16px; }
+  .ui-title { font-size: 16px; }
+  .btn { padding: 9px 14px; font-size: 13px; }
+}
