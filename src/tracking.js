@@ -98,11 +98,16 @@ function createAR() {
     tx.srcY = (vh - tx.H / scale) / 2;
   }
 
-  // video 像素 -> 显示归一化（含水平镜像）
-  function toDisplay(vx, vy) {
-    const x = ((tx.vw - vx) - tx.srcX) * tx.scale / tx.W;
-    const y = (vy - tx.srcY) * tx.scale / tx.H;
-    return { x, y };
+  // MediaPipe 归一化坐标 [0,1]（相对完整视频帧，未镜像）-> 显示归一化 [0,1]（含水平镜像 + cover 裁切）
+  function toDisplay(nx, ny) {
+    const visW = (tx.W / tx.scale) / tx.vw; // cover 后可见宽占视频比例（≤1）
+    const visH = (tx.H / tx.scale) / tx.vh;
+    const nSrcX = (1 - visW) / 2;           // 归一化裁切偏移
+    const nSrcY = (1 - visH) / 2;
+    return {
+      x: ((1 - nx) - nSrcX) / visW,         // 水平镜像
+      y: (ny - nSrcY) / visH,
+    };
   }
 
   // ---- 手部处理：左右排序 + 插值平滑 ----
@@ -123,10 +128,11 @@ function createAR() {
   }
 
   function processHands(raw) {
-    // raw: [[{x,y,z}×21], ...]，按平均 x 排序（画面左 = left）
+    // raw: [[{x,y,z}×21], ...]（x 为归一化 0~1）。
+    // 按「显示 x」升序排序：镜像后 raw x 越大 → 显示 x 越小，故降序排列，left = 画面左侧。
     const sorted = raw
       .map(pts => ({ pts, ax: avgX(pts) }))
-      .sort((a, b) => a.ax - b.ax);
+      .sort((a, b) => b.ax - a.ax);
 
     const count = sorted.length;
     if (count !== lastHandCount) {
