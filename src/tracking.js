@@ -58,6 +58,7 @@ function createAR() {
   const videoCanvas = document.createElement("canvas");
   const maskCanvas = document.createElement("canvas");
   const maskTempCanvas = document.createElement("canvas");
+  const featherCanvas = document.createElement("canvas");
 
   // ---- 事件工具 ----
   function emit(type, payload) {
@@ -81,6 +82,9 @@ function createAR() {
     }
     if (maskCanvas.width !== W || maskCanvas.height !== H) {
       maskCanvas.width = W; maskCanvas.height = H;
+    }
+    if (featherCanvas.width !== W || featherCanvas.height !== H) {
+      featherCanvas.width = W; featherCanvas.height = H;
     }
   }
 
@@ -190,6 +194,23 @@ function createAR() {
     mctx.translate(tx.W, 0);
     mctx.scale(-1, 1);
     mctx.drawImage(maskTempCanvas, sx, sy, sw, sh, 0, 0, tx.W, tx.H);
+    mctx.restore();
+    featherMask();
+  }
+
+  // ---- 人物遮罩羽化（高斯模糊柔边，消除锯齿/硬边/轮廓闪烁）----
+  function featherMask() {
+    if (!("filter" in CanvasRenderingContext2D.prototype)) return;
+    const px = Math.max(3, Math.round(Math.min(tx.W, tx.H) * 0.01));
+    const fctx = featherCanvas.getContext("2d");
+    fctx.clearRect(0, 0, tx.W, tx.H);
+    fctx.filter = "blur(" + px + "px)";
+    fctx.drawImage(maskCanvas, 0, 0);
+    const mctx = maskCanvas.getContext("2d");
+    mctx.save();
+    mctx.filter = "none";
+    mctx.clearRect(0, 0, tx.W, tx.H);
+    mctx.drawImage(featherCanvas, 0, 0);
     mctx.restore();
   }
 
